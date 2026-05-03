@@ -903,8 +903,80 @@ function secHeading(text) {
   return el('div',{className:'section-heading'},text);
 }
 
+// ── GITHUB PULL（從 GitHub Issues 拉取所有記錄）──
+async function ghPull() {
+  const {token,owner,repo} = config;
+  if (!token||!owner||!repo) return;
+
+  sync.busy = true; renderHeader();
+
+  try {
+    let page = 1, allIssues = [];
+    while(true) {
+      const r = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=100&page=${page}`,
+        { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' } }
+      );
+      if (!r.ok) break;
+      const data = await r.json();
+      if (!data.length) break;
+      allIssues = allIssues.concat(data);
+      if (data.length < 100) break;
+      page++;
+    }
+
+    const pulled = [];
+    allIssues.forEach(issue => {
+      const idMatch = issue.body?.match(/<!-- bella-log-id:([^>]+) -->/);
+      const id = idMatch ? idMatch[1] : `gh-${issue.number}`;
+
+      const bodyParts = issue.body?.split('\n---\n');
+      const text = bodyParts && bodyParts.length > 1
+        ? bodyParts.slice(1).join('\n---\n').replace(/\n\n<!-- bella-log-id:[^>]+ -->/, '').trim()
+        : issue.body || '';
+
+      const moodMatch = issue.body?.match(/\*\*心情：\*\* (.+)/);
+      const mood = moodMatch ? moodMatch[1].trim() : '';
+
+      const tagsMatch = issue.body?.match(/\*\*標籤：\*\* (.+)/);
+      const tags = tagsMatch
+        ? tagsMatch[1].split(' ').map(t => t.replace('#','')).filter(Boolean)
+        : [];
+
+      const time = issue.title.replace('📝 ','').trim();
+      const iso = issue.created_at;
+      const d = new Date(iso);
+      const month = `${d.getFullYear()} 年 ${d.getMonth()+1} 月`;
+
+      if (text) pulled.push({ id, text, mood, tags, time, month, iso });
+    });
+
+    if (pulled.length) {
+      const localIds = new Set(entries.map(e => e.id));
+      const newOnes = pulled.filter(e => !localIds.has(e.id));
+      if (newOnes.length) {
+        entries = [...entries, ...newOnes];
+        entries.sort((a,b) => new Date(b.iso) - new Date(a.iso));
+        save(LS.e, entries);
+        sync.err = null;
+        sync.busy = false;
+        renderAll();
+        toast(`✓ 已從 GitHub 同步 ${newOnes.length} 筆記錄`);
+        return;
+      }
+    }
+    sync.err = null;
+  } catch(e) { sync.err = e.message; }
+
+  sync.busy = false;
+  renderHeader();
+}
+
 // ── INIT ──
 renderAll();
+if (config.token && config.owner && config.repo) {
+  setTimeout(ghPull, 800);
+}
 </script>
 </body>
 </html>
