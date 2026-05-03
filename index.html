@@ -852,7 +852,20 @@ function openConfig() {
     save(LS.c,config); closeModals(); renderAll(); toast('✓ GitHub 設定已儲存');
   }},'✓ 儲存設定'));
 
-  if(config.token) sheet.appendChild(el('button',{className:'config-btn config-btn-cancel',onClick:()=>{ config={}; save(LS.c,config); closeModals(); renderAll(); toast('已清除設定'); }},'清除連結'));
+  if(config.token) {
+    sheet.appendChild(el('button',{className:'config-btn config-btn-cancel',onClick:()=>{ config={}; save(LS.c,config); closeModals(); renderAll(); toast('已清除設定'); }},'清除 GitHub 連結'));
+    sheet.appendChild(el('button',{className:'config-btn',style:'background:#4E6A58;color:#FDF6E8;margin-top:8px;',onClick:()=>{ closeModals(); toast('⟳ 從 GitHub 同步中…'); ghPull(); }},'⟳ 立即從 GitHub 同步'));
+  }
+
+  const dangerDiv = el('div'); dangerDiv.style.cssText='margin-top:20px;padding-top:16px;border-top:1px solid var(--line);';
+  sheet.appendChild(dangerDiv);
+  sheet.appendChild(el('div',{style:'font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:8px;'},'危險區域'));
+  sheet.appendChild(el('button',{className:'config-btn',style:'background:#6B2A2A;color:#FFE0E0;margin-top:0;',onClick:()=>{
+    if(confirm('確定要清除這台裝置上的所有記錄嗎？\n（GitHub 上的記錄不受影響）')) {
+      entries = []; save(LS.e, entries); closeModals(); renderAll(); toast('已清除本機所有記錄');
+    }
+  }},'🗑 清除本機所有記錄'));
+  sheet.appendChild(el('div',{style:'font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6;'},'只清除這台裝置的本地資料，GitHub 記錄不受影響。清除後可重新從 GitHub 同步回來。'));
   sheet.appendChild(el('button',{className:'config-btn config-btn-cancel',onClick:closeModals},'取消'));
 
   overlay.appendChild(sheet); modals.appendChild(overlay);
