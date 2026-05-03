@@ -860,19 +860,28 @@ function openConfig() {
 
 function closeModals() { document.getElementById('modals').innerHTML=''; }
 
-// ── GITHUB SYNC ──
+// ── GITHUB SYNC（用 Issues 儲存）──
 async function ghSync(entry) {
   const {token,owner,repo}=config;
   if(!token||!owner||!repo) return {ok:false,reason:'no-config'};
-  const d=new Date(entry.iso);
-  const path=`logs/${d.getFullYear()}-${pad(d.getMonth()+1)}/${entry.id}.md`;
-  const moodLine=entry.mood?`mood: ${entry.mood}\n`:'';
-  const tagsLine=entry.tags?.length?`tags: [${entry.tags.join(', ')}]\n`:'';
-  const content=`---\ndate: ${entry.time}\n${moodLine}${tagsLine}---\n\n${entry.text}\n`;
-  const encoded=btoa(unescape(encodeURIComponent(content)));
+
+  const moodLine = entry.mood ? `**心情：** ${entry.mood}\n` : '';
+  const tagsLine = entry.tags?.length ? `**標籤：** ${entry.tags.map(t=>'#'+t).join(' ')}\n` : '';
+  const body = `> 📅 ${entry.time}\n${moodLine}${tagsLine}\n---\n\n${entry.text}\n\n<!-- bella-log-id:${entry.id} -->`;
+
   try {
-    const r=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`,{method:'PUT',headers:{'Authorization':`token ${token}`,'Content-Type':'application/json','Accept':'application/vnd.github+json'},body:JSON.stringify({message:`📝 ${entry.time}`,content:encoded})});
-    return r.ok?{ok:true}:{ok:false,reason:(await r.json()).message};
+    // 先試帶 labels
+    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github+json',
+      },
+      body: JSON.stringify({ title: `📝 ${entry.time}`, body }),
+    });
+    if(r.ok) return {ok:true};
+    return {ok:false,reason:(await r.json()).message};
   } catch(e){ return {ok:false,reason:e.message}; }
 }
 
