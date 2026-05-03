@@ -35,6 +35,14 @@ body {
   overflow-x: hidden;
 }
 
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+.main-content { flex: 1; }
+
 /* NAV */
 .nav {
   position: sticky; top: 0; z-index: 80;
@@ -366,22 +374,188 @@ textarea::placeholder { color: #C0B0A0; font-style: italic; }
 .empty-text { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 17px; color: var(--muted); line-height: 1.9; }
 
 .divider { height: 1px; background: var(--line); margin: 14px 0; }
+
+/* ── DESKTOP RESPONSIVE (≥768px) ── */
+@media (min-width: 768px) {
+
+  body {
+    display: flex;
+    flex-direction: row;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    background: linear-gradient(165deg, #1C1410 0%, #2A1F14 55%, #3A2A1A 100%);
+    display: flex;
+    flex-direction: column;
+    z-index: 90;
+    scrollbar-width: none;
+  }
+  .sidebar::-webkit-scrollbar { display: none; }
+
+  /* Header inside sidebar */
+  #hdr { flex-shrink: 0; }
+  #hdr .header {
+    background: transparent;
+    padding: 36px 24px 20px;
+    border-bottom: 1px solid rgba(201,169,110,0.15);
+  }
+
+  /* Nav becomes vertical in sidebar */
+  .nav {
+    flex-direction: column;
+    background: transparent;
+    border-bottom: none;
+    border-right: none;
+    padding: 12px 0;
+    flex: 1;
+  }
+
+  .nav-btn {
+    text-align: left;
+    padding: 13px 24px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    border-radius: 0;
+    color: rgba(253,246,232,0.45);
+  }
+
+  .nav-btn.active {
+    background: rgba(201,169,110,0.1);
+    color: var(--gold-light);
+  }
+
+  .nav-btn.active::after {
+    top: 20%; bottom: 20%;
+    left: 0; right: auto;
+    width: 3px; height: auto;
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* FAB becomes sidebar bottom button */
+  .fab {
+    position: sticky;
+    bottom: 0;
+    right: auto;
+    padding: 16px 20px;
+    background: linear-gradient(to top, #1C1410, transparent);
+  }
+
+  .fab-github {
+    width: 100%;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  /* Main content area */
+  .main-content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    height: 100vh;
+  }
+
+  /* Pages */
+  .page { padding-bottom: 40px; }
+
+  /* Content max width & padding */
+  .dash-section,
+  .write-page,
+  .entries-page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 32px 40px 0;
+  }
+
+  /* Dashboard: 2-col mood + calendar side by side */
+  .year-header { border-radius: 14px; }
+
+  /* Month grid 4 cols on desktop already, make tiles smaller */
+  .month-grid { gap: 8px; }
+  .month-tile { padding: 10px 8px 8px; }
+
+  /* Write page: wider textarea */
+  .write-card { padding: 28px 32px; }
+  textarea { min-height: 220px; font-size: 15px; }
+
+  /* Entries: 2-col grid */
+  .entries-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .entry-card { margin-bottom: 0; }
+
+  /* Filter row */
+  .filter-row { flex-wrap: wrap; }
+
+  /* Header bigger on desktop */
+  .header-title { font-size: 22px; }
+  .header-deco { font-size: 130px; }
+  .header-stats { margin-top: 16px; }
+  .stat-num { font-size: 26px; }
+
+  /* Modals centered on desktop */
+  .modal-overlay {
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-sheet {
+    border-radius: 18px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 80vh;
+  }
+  .config-sheet {
+    border-radius: 18px;
+    max-width: 520px;
+    width: 100%;
+  }
+  .del-overlay { backdrop-filter: blur(6px); }
+}
+
+@media (min-width: 1100px) {
+  .sidebar { width: 300px; min-width: 300px; }
+
+  .dash-section,
+  .write-page,
+  .entries-page {
+    max-width: 900px;
+    padding: 36px 48px 0;
+  }
+}
 </style>
 </head>
 <body>
 
-<div id="hdr"></div>
-<nav class="nav" id="nav">
-  <button class="nav-btn active" data-page="dash">📅 日曆總覽</button>
-  <button class="nav-btn" data-page="write">✦ 新增記錄</button>
-  <button class="nav-btn" data-page="entries">📖 所有記錄</button>
-</nav>
-<div id="page-dash" class="page active"></div>
-<div id="page-write" class="page"></div>
-<div id="page-entries" class="page"></div>
+<!-- Sidebar (desktop) / top (mobile) -->
+<div class="sidebar">
+  <div id="hdr"></div>
+  <nav class="nav" id="nav">
+    <button class="nav-btn active" data-page="dash">📅 日曆總覽</button>
+    <button class="nav-btn" data-page="write">✦ 新增記錄</button>
+    <button class="nav-btn" data-page="entries">📖 所有記錄</button>
+  </nav>
+  <div class="fab"><button class="fab-github" id="fab-btn">🔗 連結 GitHub</button></div>
+</div>
+
+<!-- Main content -->
+<div class="main-content">
+  <div id="page-dash" class="page active"></div>
+  <div id="page-write" class="page"></div>
+  <div id="page-entries" class="page"></div>
+</div>
+
 <div id="modals"></div>
 <div id="toast" class="toast"></div>
-<div class="fab"><button class="fab-github" id="fab-btn">🔗 連結 GitHub</button></div>
 
 <script>
 // ── Storage ──
@@ -715,7 +889,9 @@ function renderEntries() {
     empty.innerHTML='<div class="empty-icon">🖊</div><div class="empty-text">還沒有符合的記錄</div>';
     wrap.appendChild(empty);
   } else {
-    filtered.forEach(e=>wrap.appendChild(buildEntryCard(e)));
+    const grid = el('div',{className:'entries-grid'});
+    filtered.forEach(e=>grid.appendChild(buildEntryCard(e)));
+    wrap.appendChild(grid);
   }
 
   c.appendChild(wrap);
@@ -736,9 +912,111 @@ function buildEntryCard(entry) {
   card.appendChild(meta);
   card.appendChild(el('div',{className:'entry-text'},entry.text));
   const act = el('div',{className:'entry-actions'});
+  act.appendChild(el('button',{className:'entry-del-btn',style:'color:var(--gold);',onClick:()=>{ openEditModal(entry); }},'✏️ 編輯'));
   act.appendChild(el('button',{className:'entry-del-btn',onClick:()=>{ pendingDel=entry.id; renderDel(); }},'刪除'));
   card.appendChild(act);
   return card;
+}
+
+
+// ── GITHUB UPDATE ISSUE ──
+async function ghUpdateIssue(entry) {
+  const {token,owner,repo} = config;
+  if (!token||!owner||!repo) return;
+  try {
+    let page = 1;
+    while(true) {
+      const r = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=100&page=${page}`,
+        { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' } }
+      );
+      if (!r.ok) break;
+      const issues = await r.json();
+      if (!issues.length) break;
+      const match = issues.find(i => i.body?.includes(`bella-log-id:${entry.id}`));
+      if (match) {
+        const moodLine = entry.mood ? `**心情：** ${entry.mood}\n` : '';
+        const tagsLine = entry.tags?.length ? `**標籤：** ${entry.tags.map(t=>'#'+t).join(' ')}\n` : '';
+        const body = `> 📅 ${entry.time}\n${moodLine}${tagsLine}\n---\n\n${entry.text}\n\n<!-- bella-log-id:${entry.id} -->`;
+        await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${match.number}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' },
+          body: JSON.stringify({ title: `📝 ${entry.time}`, body })
+        });
+        return;
+      }
+      if (issues.length < 100) break;
+      page++;
+    }
+  } catch(e) { console.error('更新 Issue 失敗', e); }
+}
+
+// ── EDIT MODAL ──
+function openEditModal(entry) {
+  const modals = document.getElementById('modals');
+  modals.innerHTML = '';
+  const overlay = el('div',{className:'modal-overlay',onClick:e=>{ if(e.target===overlay) closeModals(); }});
+  const sheet = el('div',{className:'modal-sheet'});
+  sheet.appendChild(el('div',{className:'modal-handle'}));
+  sheet.appendChild(el('div',{className:'modal-title'},'編輯記錄'));
+  sheet.appendChild(el('div',{className:'modal-sub'},entry.time));
+
+  // 心情選擇
+  sheet.appendChild(el('div',{style:'font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:8px;'},'心情'));
+  let selMood = entry.mood || '';
+  const moodRow = el('div',{className:'mood-row',style:'margin-bottom:16px;'});
+  moods.forEach(m => {
+    const btn = el('button',{className:'mood-btn'+(selMood===m?' active':''),onClick:()=>{
+      selMood = selMood===m?'':m;
+      moodRow.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('active'));
+      if(selMood===m) btn.classList.add('active');
+    }},m);
+    moodRow.appendChild(btn);
+  });
+  sheet.appendChild(moodRow);
+
+  // 標籤選擇
+  sheet.appendChild(el('div',{style:'font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:8px;'},'標籤'));
+  let selTags = [...(entry.tags||[])];
+  const tagRow = el('div',{className:'tag-row',style:'margin-bottom:16px;'});
+  tags.forEach(t => {
+    const btn = el('button',{className:'tag-btn'+(selTags.includes(t)?' active':''),onClick:()=>{
+      selTags = selTags.includes(t) ? selTags.filter(x=>x!==t) : [...selTags,t];
+      btn.classList.toggle('active');
+    }},'#'+t);
+    tagRow.appendChild(btn);
+  });
+  sheet.appendChild(tagRow);
+
+  // 內文編輯
+  sheet.appendChild(el('div',{style:'font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:8px;'},'內文'));
+  const ta = el('textarea');
+  Object.assign(ta.style,{width:'100%',minHeight:'140px',border:'1.5px solid var(--line)',borderRadius:'10px',padding:'12px 14px',fontFamily:'Noto Serif TC, serif',fontSize:'14px',color:'var(--ink)',background:'var(--paper)',outline:'none',resize:'vertical',lineHeight:'1.9',boxSizing:'border-box',marginBottom:'14px'});
+  ta.value = entry.text;
+  sheet.appendChild(ta);
+
+  // 儲存按鈕
+  const saveBtn = el('button',{className:'add-item-btn',style:'width:100%;padding:13px;border-radius:12px;font-size:14px;letter-spacing:2px;',onClick:async()=>{
+    const newText = ta.value.trim();
+    if (!newText) return;
+    const updated = {...entry, text:newText, mood:selMood, tags:selTags};
+    entries = entries.map(e=>e.id===entry.id ? updated : e);
+    save(LS.e, entries);
+    closeModals();
+    renderAll();
+    toast('儲存中…');
+    if (config.token) {
+      await ghUpdateIssue(updated);
+      toast('✓ 已儲存並同步到 GitHub');
+    } else {
+      toast('✓ 已儲存');
+    }
+  }},'✓ 儲存並同步');
+
+  sheet.appendChild(saveBtn);
+  sheet.appendChild(el('button',{className:'modal-close-btn',onClick:closeModals},'取消'));
+  overlay.appendChild(sheet);
+  modals.appendChild(overlay);
 }
 
 // ── MANAGE MODAL ──
@@ -808,6 +1086,37 @@ function openManage(type) {
   modals.appendChild(overlay);
 }
 
+// ── GITHUB CLOSE ISSUE（刪除時同步關閉）──
+async function ghCloseIssue(entryId) {
+  const {token,owner,repo} = config;
+  if (!token||!owner||!repo) return;
+  try {
+    // 找到對應的 Issue（搜尋 bella-log-id）
+    let page = 1;
+    while(true) {
+      const r = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=100&page=${page}`,
+        { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' } }
+      );
+      if (!r.ok) break;
+      const issues = await r.json();
+      if (!issues.length) break;
+      const match = issues.find(i => i.body?.includes(`bella-log-id:${entryId}`));
+      if (match) {
+        // 關閉這個 Issue
+        await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${match.number}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' },
+          body: JSON.stringify({ state: 'closed' })
+        });
+        return;
+      }
+      if (issues.length < 100) break;
+      page++;
+    }
+  } catch(e) { console.error('關閉 Issue 失敗', e); }
+}
+
 // ── DEL CONFIRM ──
 function renderDel() {
   const entry = entries.find(e=>e.id===pendingDel);
@@ -818,7 +1127,21 @@ function renderDel() {
   const preview = entry ? entry.text.slice(0,50)+(entry.text.length>50?'…':'') : '';
   card.innerHTML=`<div class="del-card-icon">🗑</div><div class="del-card-title">刪除記錄</div><div class="del-card-sub">確定要刪除這筆記錄？<br><br>「${preview}」</div>`;
   const btns=el('div',{className:'del-btns'});
-  btns.appendChild(el('button',{className:'del-btn del-btn-confirm',onClick:()=>{ entries=entries.filter(e=>e.id!==pendingDel); save(LS.e,entries); pendingDel=null; closeModals(); renderAll(); toast('已刪除'); }},'確認刪除'));
+  btns.appendChild(el('button',{className:'del-btn del-btn-confirm',onClick:async ()=>{
+    const id = pendingDel;
+    entries=entries.filter(e=>e.id!==id);
+    save(LS.e,entries);
+    pendingDel=null;
+    closeModals();
+    renderAll();
+    toast('刪除中…');
+    if (config.token) {
+      await ghCloseIssue(id);
+      toast('✓ 已刪除並同步到 GitHub');
+    } else {
+      toast('已刪除');
+    }
+  }},'確認刪除'));
   btns.appendChild(el('button',{className:'del-btn del-btn-cancel',onClick:()=>{ pendingDel=null; closeModals(); }},'取消'));
   card.appendChild(btns); overlay.appendChild(card); modals.appendChild(overlay);
 }
@@ -965,18 +1288,25 @@ async function ghPull() {
     });
 
     if (pulled.length) {
-      const localIds = new Set(entries.map(e => e.id));
-      const newOnes = pulled.filter(e => !localIds.has(e.id));
-      if (newOnes.length) {
-        entries = [...entries, ...newOnes];
-        entries.sort((a,b) => new Date(b.iso) - new Date(a.iso));
-        save(LS.e, entries);
-        sync.err = null;
-        sync.busy = false;
-        renderAll();
-        toast(`✓ 已從 GitHub 同步 ${newOnes.length} 筆記錄`);
-        return;
-      }
+      // GitHub 是唯一真相來源：用 GitHub 的資料完整覆蓋本地
+      // 保留本地有但 GitHub 沒有的（尚未同步的新記錄）
+      const ghIds = new Set(pulled.map(e => e.id));
+      const localOnlyEntries = entries.filter(e => !ghIds.has(e.id));
+
+      // 合併：GitHub 資料 + 本地未同步的記錄
+      entries = [...pulled, ...localOnlyEntries];
+      entries.sort((a,b) => new Date(b.iso) - new Date(a.iso));
+      save(LS.e, entries);
+      sync.err = null;
+      sync.busy = false;
+      renderAll();
+      toast('✓ 已與 GitHub 同步');
+      return;
+    } else {
+      // GitHub 沒有任何記錄，清空本地（以 GitHub 為準）
+      entries = [];
+      save(LS.e, entries);
+      renderAll();
     }
     sync.err = null;
   } catch(e) { sync.err = e.message; }
