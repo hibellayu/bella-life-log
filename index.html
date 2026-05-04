@@ -270,12 +270,27 @@ textarea::placeholder { color: #C0B0A0; font-style: italic; }
 .entries-page { padding: 24px 20px 0; }
 .filter-row { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .filter-row::-webkit-scrollbar { display: none; }
+.search-input {
+  width: 100%; border: 1.5px solid var(--line); border-radius: 20px;
+  padding: 10px 18px; background: var(--card);
+  font-family: 'Noto Serif TC', serif; font-size: 13px; color: var(--ink);
+  outline: none; margin-bottom: 10px; letter-spacing: 0.5px;
+}
+.search-input:focus { border-color: var(--gold-light); }
+.search-input::placeholder { color: var(--muted); font-style: italic; }
 .filter-chip {
   border: 1px solid var(--line); background: var(--card);
   border-radius: 20px; padding: 6px 14px; font-size: 11px; color: var(--muted);
   cursor: pointer; font-family: inherit; letter-spacing: 1px; white-space: nowrap; transition: all 0.15s;
 }
 .filter-chip.active { background: var(--deep); border-color: var(--deep); color: var(--gold-light); }
+.export-btn {
+  border: 1px solid var(--gold-light); background: transparent;
+  border-radius: 20px; padding: 6px 14px; font-size: 11px; color: var(--gold);
+  cursor: pointer; font-family: inherit; letter-spacing: 1px; white-space: nowrap; flex-shrink: 0;
+  transition: all 0.15s;
+}
+.export-btn:active { background: var(--gold-pale); }
 
 .entry-card {
   background: var(--card); border: 1px solid var(--line);
@@ -574,6 +589,7 @@ let page = 'dash';
 let ws = resetWriteState();
 let dashSel = null;
 let entFilter = 'all';
+let searchQuery = '';
 let pendingDel = null;
 let sync = { busy: false, err: null };
 
@@ -593,7 +609,8 @@ const MNAMES = ['January','February','March','April','May','June','July','August
 
 function todayStr() {
   const d = new Date();
-  return `${WDAYS[d.getDay()]}, ${MNAMES[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  const wdays = ['日','一','二','三','四','五','六'];
+  return `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日（${wdays[d.getDay()]}）`;
 }
 
 // ── Toast ──
@@ -872,10 +889,17 @@ function renderEntries() {
   const wrap = el('div',{className:'entries-page'});
   wrap.appendChild(secHeading('所有記錄'));
 
+  // Search input
+  const searchInp = el('input',{className:'search-input',type:'search',placeholder:'🔍 搜尋記錄內容…',value:searchQuery});
+  searchInp.addEventListener('input',e=>{ searchQuery=e.target.value; renderEntries(); });
+  wrap.appendChild(searchInp);
+
+  // Filter chips + export button
   const fr = el('div',{className:'filter-row'});
   fr.appendChild(fChip('all','全部'));
   moods.forEach(m=>fr.appendChild(fChip('mood:'+m,m)));
   tags.forEach(t=>fr.appendChild(fChip('tag:'+t,'#'+t)));
+  fr.appendChild(el('button',{className:'export-btn',onClick:exportEntries},'📤 匯出'));
   wrap.appendChild(fr);
 
   let filtered = [...entries].sort((a,b)=>new Date(b.iso)-new Date(a.iso));
@@ -883,10 +907,20 @@ function renderEntries() {
     if (entFilter.startsWith('mood:')) filtered=filtered.filter(e=>e.mood===entFilter.slice(5));
     else if (entFilter.startsWith('tag:')) filtered=filtered.filter(e=>e.tags&&e.tags.includes(entFilter.slice(4)));
   }
+  if (searchQuery.trim()) {
+    const q = searchQuery.trim().toLowerCase();
+    filtered = filtered.filter(e=>
+      e.text.toLowerCase().includes(q) ||
+      (e.mood&&e.mood.toLowerCase().includes(q)) ||
+      (e.tags&&e.tags.some(t=>t.toLowerCase().includes(q)))
+    );
+  }
 
   if (!filtered.length) {
     const empty = el('div',{className:'empty-state'});
-    empty.innerHTML='<div class="empty-icon">🖊</div><div class="empty-text">還沒有符合的記錄</div>';
+    empty.innerHTML = searchQuery
+      ? '<div class="empty-icon">🔍</div><div class="empty-text">沒有符合的記錄<br>試試其他關鍵字</div>'
+      : '<div class="empty-icon">🖊</div><div class="empty-text">還沒有符合的記錄</div>';
     wrap.appendChild(empty);
   } else {
     const grid = el('div',{className:'entries-grid'});
@@ -1219,6 +1253,28 @@ async function ghSync(entry) {
     if(r.ok) return {ok:true};
     return {ok:false,reason:(await r.json()).message};
   } catch(e){ return {ok:false,reason:e.message}; }
+}
+
+// ── EXPORT ──
+function exportEntries() {
+  if (!entries.length) { toast('沒有記錄可匯出'); return; }
+  const lines = [`# Bella's Life Log`, `匯出時間：${new Date().toLocaleString('zh-TW')}`, ''];
+  [...entries].sort((a,b)=>new Date(b.iso)-new Date(a.iso)).forEach(e=>{
+    lines.push('---');
+    lines.push(`## ${e.time}`);
+    if (e.mood) lines.push(`心情：${e.mood}`);
+    if (e.tags?.length) lines.push(`標籤：${e.tags.map(t=>'#'+t).join(' ')}`);
+    lines.push('');
+    lines.push(e.text);
+    lines.push('');
+  });
+  const blob = new Blob([lines.join('\n')],{type:'text/markdown;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date();
+  a.href=url; a.download=`bella-life-log-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.md`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('✓ 已匯出 Markdown 檔案');
 }
 
 // ── DOM HELPER ──
