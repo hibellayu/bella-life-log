@@ -961,7 +961,7 @@ async function ghUpdateIssue(entry) {
     let page = 1;
     while(true) {
       const r = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=100&page=${page}`,
+        `https://api.github.com/repos/${owner}/${repo}/issues?state=all&per_page=100&page=${page}`,
         { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' } }
       );
       if (!r.ok) break;
@@ -1129,7 +1129,7 @@ async function ghCloseIssue(entryId) {
     let page = 1;
     while(true) {
       const r = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=100&page=${page}`,
+        `https://api.github.com/repos/${owner}/${repo}/issues?state=all&per_page=100&page=${page}`,
         { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' } }
       );
       if (!r.ok) break;
@@ -1306,7 +1306,7 @@ async function ghPull() {
     let page = 1, allIssues = [];
     while(true) {
       const r = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=100&page=${page}`,
+        `https://api.github.com/repos/${owner}/${repo}/issues?state=all&per_page=100&page=${page}`,
         { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' } }
       );
       if (!r.ok) break;
