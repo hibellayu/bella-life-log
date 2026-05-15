@@ -580,15 +580,16 @@ textarea::placeholder { color: #C0B0A0; font-style: italic; }
 
 <script>
 // ── Storage ──
-const LS = { e:'bella_log_v2_entries', c:'bella_log_v2_config', m:'bella_log_v2_moods', t:'bella_log_v2_tags' };
+const LS = { e:'bella_log_v2_entries', c:'bella_log_v2_config', m:'bella_log_v2_moods', t:'bella_log_v2_tags', d:'bella_log_v2_deleted' };
 const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } };
 const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch(e){} };
 
 // ── Data ──
-let entries = load(LS.e) || [];
-let config  = load(LS.c) || {};
-let moods   = load(LS.m) || ['開心','平靜','疲倦','焦慮','充實'];
-let tags    = load(LS.t) || ['運動','投資','工作','健康','生活','轉職','心情','靈感'];
+let entries    = load(LS.e) || [];
+let config     = load(LS.c) || {};
+let moods      = load(LS.m) || ['開心','平靜','疲倦','焦慮','充實'];
+let tags       = load(LS.t) || ['運動','投資','工作','健康','生活','轉職','心情','靈感'];
+let deletedIds = new Set(load(LS.d) || []);
 
 // ── UI state ──
 let page = 'dash';
@@ -1184,6 +1185,8 @@ function renderDel() {
     const id = pendingDel;
     entries=entries.filter(e=>e.id!==id);
     save(LS.e,entries);
+    deletedIds.add(id);
+    save(LS.d,[...deletedIds]);
     pendingDel=null;
     closeModals();
     renderAll();
@@ -1360,7 +1363,7 @@ async function ghPull() {
       const d = new Date(iso);
       const month = `${d.getFullYear()} 年 ${d.getMonth()+1} 月`;
 
-      if (text) pulled.push({ id, text, mood, tags, time, month, iso });
+      if (text && !deletedIds.has(id)) pulled.push({ id, text, mood, tags, time, month, iso });
     });
 
     if (pulled.length) {
