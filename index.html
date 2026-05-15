@@ -766,20 +766,8 @@ function renderDash() {
         const reportBtn = el('button',{className:'month-report-btn'},`📄 生成月報`);
         reportBtn.onclick = (e) => {
           e.stopPropagation();
-          const y = dashSel.y, m = dashSel.m;
-          const sorted = [...me].sort((a,b)=>new Date(a.iso)-new Date(b.iso));
-          const lines = [`【Bella Life Log 月報素材】${y} 年 ${m} 月`, `記錄筆數：${sorted.length} 筆`, ''];
-          sorted.forEach(e => {
-            lines.push('---');
-            lines.push(`日期：${e.time}`);
-            if (e.mood) lines.push(`心情：${e.mood}`);
-            if (e.tags?.length) lines.push(`標籤：${e.tags.map(t=>'#'+t).join(' ')}`);
-            lines.push(`內容：\n${e.text}`);
-            lines.push('');
-          });
-          navigator.clipboard.writeText(lines.join('\n')).then(()=>{
-            toast(`✓ 已複製 ${m} 月素材，請到 Claude Code 說「幫我生成 ${m} 月月報」`);
-          });
+          const m = dashSel.m;
+          toast(`請到 Claude Code 說「幫我生成 ${m} 月月報」`);
         };
         phdrRight.appendChild(reportBtn);
       }
