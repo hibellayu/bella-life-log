@@ -181,6 +181,8 @@ body {
 .month-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 18px; border-bottom: 1px solid var(--line); background: var(--cream); }
 .month-panel-title { font-size: 14px; font-weight: 500; letter-spacing: 1px; }
 .month-panel-close { background: none; border: none; font-size: 18px; color: var(--muted); cursor: pointer; line-height: 1; }
+.month-report-btn { background: none; border: 1px solid var(--gold); border-radius: 8px; font-size: 11px; color: var(--gold); cursor: pointer; padding: 3px 10px; font-family: inherit; letter-spacing: 1px; }
+.month-report-btn:active { background: var(--gold-pale); }
 .mini-entry { padding: 13px 18px; border-bottom: 1px solid var(--line); }
 .mini-entry:last-child { border-bottom: none; }
 .mini-entry-time { font-family: 'Cormorant Garamond', serif; font-size: 12px; color: var(--muted); letter-spacing: 1px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -759,8 +761,31 @@ function renderDash() {
       const panel = el('div',{className:'month-entries-panel'});
       const phdr = el('div',{className:'month-panel-header'});
       phdr.innerHTML = `<span class="month-panel-title">${dashSel.y} 年 ${dashSel.m} 月・${me.length} 筆記錄</span>`;
+      const phdrRight = el('div',{style:'display:flex;align-items:center;gap:8px;'});
+      if (me.length) {
+        const reportBtn = el('button',{className:'month-report-btn'},`📄 生成月報`);
+        reportBtn.onclick = (e) => {
+          e.stopPropagation();
+          const y = dashSel.y, m = dashSel.m;
+          const sorted = [...me].sort((a,b)=>new Date(a.iso)-new Date(b.iso));
+          const lines = [`【Bella Life Log 月報素材】${y} 年 ${m} 月`, `記錄筆數：${sorted.length} 筆`, ''];
+          sorted.forEach(e => {
+            lines.push('---');
+            lines.push(`日期：${e.time}`);
+            if (e.mood) lines.push(`心情：${e.mood}`);
+            if (e.tags?.length) lines.push(`標籤：${e.tags.map(t=>'#'+t).join(' ')}`);
+            lines.push(`內容：\n${e.text}`);
+            lines.push('');
+          });
+          navigator.clipboard.writeText(lines.join('\n')).then(()=>{
+            toast(`✓ 已複製 ${m} 月素材，請到 Claude Code 說「幫我生成 ${m} 月月報」`);
+          });
+        };
+        phdrRight.appendChild(reportBtn);
+      }
       const closeBtn = el('button',{className:'month-panel-close',onClick:(e)=>{e.stopPropagation();dashSel=null;renderDash();}},'✕');
-      phdr.appendChild(closeBtn);
+      phdrRight.appendChild(closeBtn);
+      phdr.appendChild(phdrRight);
       panel.appendChild(phdr);
       if (!me.length) {
         panel.appendChild(Object.assign(el('div'),{textContent:'這個月還沒有記錄',style:'text-align:center;padding:20px;color:var(--muted);font-size:13px;'}));
