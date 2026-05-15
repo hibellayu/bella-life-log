@@ -295,7 +295,7 @@ textarea::placeholder { color: #C0B0A0; font-style: italic; }
 .entry-card {
   background: var(--card); border: 1px solid var(--line);
   border-radius: 14px; padding: 16px 18px; margin-bottom: 12px;
-  position: relative; overflow: hidden;
+  position: relative;
   animation: fadeSlideIn 0.3s ease;
 }
 @keyframes fadeSlideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
@@ -306,6 +306,12 @@ textarea::placeholder { color: #C0B0A0; font-style: italic; }
 .entry-tags { display: flex; gap: 4px; flex-wrap: wrap; }
 .entry-tag { font-size: 10px; padding: 1px 7px; border-radius: 4px; background: rgba(155,123,58,0.08); color: var(--muted); letter-spacing: 1px; }
 .entry-text { font-size: 14px; line-height: 1.9; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
+.entry-text-wrap { position: relative; }
+.entry-text-wrap.collapsed { max-height: 130px; overflow: hidden; }
+.entry-text-fade { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; background: linear-gradient(to bottom, transparent, var(--card)); pointer-events: none; }
+.entry-text-wrap:not(.collapsed) .entry-text-fade { display: none; }
+.expand-btn { background: none; border: none; font-size: 11px; color: var(--gold); cursor: pointer; padding: 4px 0 2px; font-family: inherit; letter-spacing: 1px; display: block; }
+.expand-btn:hover { opacity: 0.7; }
 .entry-actions { display: flex; justify-content: flex-end; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
 .entry-del-btn { background: none; border: none; font-size: 11px; color: var(--muted); cursor: pointer; padding: 2px 6px; font-family: inherit; letter-spacing: 1px; }
 .entry-del-btn:active { color: var(--rust); }
@@ -944,7 +950,20 @@ function buildEntryCard(entry) {
   if(entry.mood) meta.appendChild(el('span',{className:'entry-mood-badge'},entry.mood));
   if(entry.tags&&entry.tags.length){ const td=el('div',{className:'entry-tags'}); entry.tags.forEach(t=>td.appendChild(el('span',{className:'entry-tag'},'#'+t))); meta.appendChild(td); }
   card.appendChild(meta);
-  card.appendChild(el('div',{className:'entry-text'},entry.text));
+  const isLong = entry.text.length > 200;
+  const textWrap = el('div',{className:'entry-text-wrap'+(isLong?' collapsed':'')});
+  textWrap.appendChild(el('div',{className:'entry-text'},entry.text));
+  if(isLong){ textWrap.appendChild(el('div',{className:'entry-text-fade'})); }
+  card.appendChild(textWrap);
+  if(isLong){
+    const expandBtn = el('button',{className:'expand-btn'});
+    expandBtn.textContent = '展開閱讀 ↓';
+    expandBtn.onclick = ()=>{
+      const collapsed = textWrap.classList.toggle('collapsed');
+      expandBtn.textContent = collapsed ? '展開閱讀 ↓' : '收起 ↑';
+    };
+    card.appendChild(expandBtn);
+  }
   const act = el('div',{className:'entry-actions'});
   act.appendChild(el('button',{className:'entry-del-btn',style:'color:var(--gold);',onClick:()=>{ openEditModal(entry); }},'✏️ 編輯'));
   act.appendChild(el('button',{className:'entry-del-btn',onClick:()=>{ pendingDel=entry.id; renderDel(); }},'刪除'));
