@@ -664,8 +664,9 @@ function renderPage(p) {
 function renderHeader() {
   const n = new Date();
   const thisM = entries.filter(e=>{ const d=new Date(e.iso); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth(); }).length;
+  const daySet = new Set(entries.map(e=>{ const d=new Date(e.iso); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }));
   const monthSet = new Set(entries.map(e=>{ const d=new Date(e.iso); return `${d.getFullYear()}-${d.getMonth()}`; }));
-  const avgPerMonth = monthSet.size > 0 ? Math.round(entries.length / monthSet.size) : 0;
+  const avgPerMonth = monthSet.size > 0 ? Math.round(daySet.size / monthSet.size) : 0;
   const syncBadge = config.token ? `<div class="sync-row"><span class="sync-badge ${sync.err?'fail':sync.busy?'pending':'ok'}">${sync.busy?'⟳ 同步中…':sync.err?'✕ 同步失敗':'✓ 已連結 GitHub'}</span></div>` : '';
   document.getElementById('hdr').innerHTML = `
     <div class="header">
