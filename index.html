@@ -629,6 +629,13 @@ let moods = (() => {
   return stored;
 })();
 
+// 相容舊資料：mood 欄位可能是單一字串（改版前），也可能是陣列（多選後）
+function moodArr(entry) {
+  const m = entry && entry.mood;
+  if (!m) return [];
+  return Array.isArray(m) ? m : [m];
+}
+
 function getMoodGroups() {
   const known = new Set(DEFAULT_MOODS);
   const groups = PRESET_MOOD_GROUPS
@@ -639,27 +646,33 @@ function getMoodGroups() {
   return groups;
 }
 
-// 心情選擇器：分類列表，預設收合，點分類展開
-function buildMoodPicker(initialMood, onChange) {
+// 心情選擇器：分類列表，預設收合，點分類展開，心情可複選
+function buildMoodPicker(initialMoods, onChange) {
   const wrap = el('div',{className:'mood-picker'});
-  let selected = initialMood || '';
+  let selected = Array.isArray(initialMoods) ? [...initialMoods] : (initialMoods ? [initialMoods] : []);
   let openGroup = null;
+
+  function toggle(m) {
+    selected = selected.includes(m) ? selected.filter(x=>x!==m) : [...selected,m];
+    onChange([...selected]);
+    render();
+  }
 
   function render() {
     wrap.innerHTML = '';
-    if (selected) {
+    if (selected.length) {
       const cur = el('div',{className:'mood-current'});
       cur.appendChild(el('span',{},'目前心情：'));
-      cur.appendChild(el('strong',{},selected));
-      cur.appendChild(el('button',{type:'button',className:'mood-clear-btn',onClick:()=>{ selected=''; onChange(''); render(); }},'✕'));
+      cur.appendChild(el('strong',{},selected.join('、')));
+      cur.appendChild(el('button',{type:'button',className:'mood-clear-btn',onClick:()=>{ selected=[]; onChange([]); render(); }},'清除'));
       wrap.appendChild(cur);
     }
     getMoodGroups().forEach(g=>{
       const isOpen = openGroup===g.name;
       const groupWrap = el('div',{className:'mood-group'});
-      const hasSel = g.items.includes(selected);
+      const selInGroup = g.items.filter(m=>selected.includes(m));
       const header = el('button',{type:'button',className:'mood-group-header'+(isOpen?' open':'')},
-        el('span',{},g.name+(hasSel?' · '+selected:'')),
+        el('span',{},g.name+(selInGroup.length?' · '+selInGroup.join('、'):'')),
         el('span',{className:'mood-group-arrow'},isOpen?'－':'＋')
       );
       header.addEventListener('click',()=>{ openGroup = isOpen?null:g.name; render(); });
@@ -667,8 +680,8 @@ function buildMoodPicker(initialMood, onChange) {
       if (isOpen) {
         const row = el('div',{className:'mood-row'});
         g.items.forEach(m=>{
-          const btn = el('button',{type:'button',className:'mood-btn'+(selected===m?' active':'')},m);
-          btn.addEventListener('click',()=>{ selected = selected===m?'':m; onChange(selected); render(); });
+          const btn = el('button',{type:'button',className:'mood-btn'+(selected.includes(m)?' active':'')},m);
+          btn.addEventListener('click',()=>toggle(m));
           row.appendChild(btn);
         });
         groupWrap.appendChild(row);
@@ -692,7 +705,7 @@ let sync = { busy: false, err: null };
 
 function resetWriteState() {
   const n = new Date();
-  return { text:'', mood:'', tags:[], year:n.getFullYear(), month:n.getMonth()+1, day:n.getDate(), time:pad(n.getHours())+':'+pad(n.getMinutes()) };
+  return { text:'', mood:[], tags:[], year:n.getFullYear(), month:n.getMonth()+1, day:n.getDate(), time:pad(n.getHours())+':'+pad(n.getMinutes()) };
 }
 
 // ── Helpers ──
@@ -778,7 +791,7 @@ function renderDash() {
 
   // Mood summary
   const moodCounts = {};
-  entries.forEach(e=>{ if(e.mood) moodCounts[e.mood]=(moodCounts[e.mood]||0)+1; });
+  entries.forEach(e=>{ moodArr(e).forEach(m=>{ moodCounts[m]=(moodCounts[m]||0)+1; }); });
   if (Object.keys(moodCounts).length) {
     wrap.appendChild(secHeading('情緒分布'));
     const row = el('div',{className:'mood-summary'});
@@ -868,7 +881,8 @@ function renderDash() {
       } else {
         [...me].sort((a,b)=>new Date(b.iso)-new Date(a.iso)).forEach(e=>{
           const mini = el('div',{className:'mini-entry'});
-          mini.innerHTML = `<div class="mini-entry-time">🕐 ${e.time}${e.mood?` <span class="mini-mood">${e.mood}</span>`:''}</div><div class="mini-entry-preview">${e.text}</div>`;
+          const eMoods = moodArr(e);
+          mini.innerHTML = `<div class="mini-entry-time">🕐 ${e.time}${eMoods.length?` <span class="mini-mood">${eMoods.join('、')}</span>`:''}</div><div class="mini-entry-preview">${e.text}</div>`;
           panel.appendChild(mini);
         });
       }
@@ -966,7 +980,7 @@ async function handleSubmit() {
   if (!text) { toast('請先寫些什麼 ✦'); return; }
 
   const iso = new Date(ws.year, ws.month-1, ws.day, parseInt(ws.time.split(':')[0]), parseInt(ws.time.split(':')[1])).toISOString();
-  const entry = { id:uid(), text, mood:ws.mood, tags:[...ws.tags], time:fmtdt(ws.year,ws.month,ws.day,ws.time), month:`${ws.year} 年 ${ws.month} 月`, iso };
+  const entry = { id:uid(), text, mood:[...ws.mood], tags:[...ws.tags], time:fmtdt(ws.year,ws.month,ws.day,ws.time), month:`${ws.year} 年 ${ws.month} 月`, iso };
 
   entries.unshift(entry);
   save(LS.e, entries);
@@ -1005,14 +1019,14 @@ function renderEntries() {
 
   let filtered = [...entries].sort((a,b)=>new Date(b.iso)-new Date(a.iso));
   if (entFilter!=='all') {
-    if (entFilter.startsWith('mood:')) filtered=filtered.filter(e=>e.mood===entFilter.slice(5));
+    if (entFilter.startsWith('mood:')) filtered=filtered.filter(e=>moodArr(e).includes(entFilter.slice(5)));
     else if (entFilter.startsWith('tag:')) filtered=filtered.filter(e=>e.tags&&e.tags.includes(entFilter.slice(4)));
   }
   if (searchQuery.trim()) {
     const q = searchQuery.trim().toLowerCase();
     filtered = filtered.filter(e=>
       e.text.toLowerCase().includes(q) ||
-      (e.mood&&e.mood.toLowerCase().includes(q)) ||
+      moodArr(e).some(m=>m.toLowerCase().includes(q)) ||
       (e.tags&&e.tags.some(t=>t.toLowerCase().includes(q)))
     );
   }
@@ -1039,10 +1053,11 @@ function fChip(key,label) {
 
 function buildEntryCard(entry) {
   const card = el('div',{className:'entry-card'});
-  if(entry.mood) card.setAttribute('data-mood',entry.mood);
+  const entryMoods = moodArr(entry);
+  if(entryMoods.length) card.setAttribute('data-mood',entryMoods.join('、'));
   const meta = el('div',{className:'entry-meta'});
   meta.appendChild(el('span',{className:'entry-time'},'🕐 '+entry.time));
-  if(entry.mood) meta.appendChild(el('span',{className:'entry-mood-badge'},entry.mood));
+  entryMoods.forEach(m=>meta.appendChild(el('span',{className:'entry-mood-badge'},m)));
   if(entry.tags&&entry.tags.length){ const td=el('div',{className:'entry-tags'}); entry.tags.forEach(t=>td.appendChild(el('span',{className:'entry-tag'},'#'+t))); meta.appendChild(td); }
   card.appendChild(meta);
   const isLong = entry.text.length > 200;
@@ -1083,7 +1098,7 @@ async function ghUpdateIssue(entry) {
       if (!issues.length) break;
       const match = issues.find(i => i.body?.includes(`bella-log-id:${entry.id}`));
       if (match) {
-        const moodLine = entry.mood ? `**心情：** ${entry.mood}\n` : '';
+        const moodLine = moodArr(entry).length ? `**心情：** ${moodArr(entry).join('、')}\n` : '';
         const tagsLine = entry.tags?.length ? `**標籤：** ${entry.tags.map(t=>'#'+t).join(' ')}\n` : '';
         const body = `> 📅 ${entry.time}\n${moodLine}${tagsLine}\n---\n\n${entry.text}\n\n<!-- bella-log-id:${entry.id} -->`;
         await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${match.number}`, {
@@ -1111,7 +1126,7 @@ function openEditModal(entry) {
 
   // 心情選擇
   sheet.appendChild(el('div',{style:'font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:8px;'},'心情'));
-  let selMood = entry.mood || '';
+  let selMood = moodArr(entry);
   const moodPicker = buildMoodPicker(selMood, v=>{ selMood=v; });
   moodPicker.style.marginBottom = '16px';
   sheet.appendChild(moodPicker);
@@ -1140,7 +1155,7 @@ function openEditModal(entry) {
   const saveBtn = el('button',{className:'add-item-btn',style:'width:100%;padding:13px;border-radius:12px;font-size:14px;letter-spacing:2px;',onClick:async()=>{
     const newText = ta.value.trim();
     if (!newText) return;
-    const updated = {...entry, text:newText, mood:selMood, tags:selTags};
+    const updated = {...entry, text:newText, mood:[...selMood], tags:selTags};
     entries = entries.map(e=>e.id===entry.id ? updated : e);
     save(LS.e, entries);
     closeModals();
@@ -1187,7 +1202,7 @@ function openManage(type) {
         const okBtn = el('button',{className:'manage-icon-btn',style:'color:var(--gold)',onClick:()=>{
           const v=inp.value.trim(); if(!v) return;
           data[idx]=v;
-          if(type==='moods'){ moods=[...data]; save(LS.m,moods); if(ws.mood===item)ws.mood=v; }
+          if(type==='moods'){ moods=[...data]; save(LS.m,moods); if(ws.mood.includes(item))ws.mood=ws.mood.map(x=>x===item?v:x); }
           else { tags=[...data]; save(LS.t,tags); ws.tags=ws.tags.map(x=>x===item?v:x); }
           rebuild();
         }},'✓');
@@ -1344,7 +1359,7 @@ async function ghSync(entry) {
   const {token,owner,repo}=config;
   if(!token||!owner||!repo) return {ok:false,reason:'no-config'};
 
-  const moodLine = entry.mood ? `**心情：** ${entry.mood}\n` : '';
+  const moodLine = moodArr(entry).length ? `**心情：** ${moodArr(entry).join('、')}\n` : '';
   const tagsLine = entry.tags?.length ? `**標籤：** ${entry.tags.map(t=>'#'+t).join(' ')}\n` : '';
   const body = `> 📅 ${entry.time}\n${moodLine}${tagsLine}\n---\n\n${entry.text}\n\n<!-- bella-log-id:${entry.id} -->`;
 
@@ -1371,7 +1386,7 @@ function exportEntries() {
   [...entries].sort((a,b)=>new Date(b.iso)-new Date(a.iso)).forEach(e=>{
     lines.push('---');
     lines.push(`## ${e.time}`);
-    if (e.mood) lines.push(`心情：${e.mood}`);
+    if (moodArr(e).length) lines.push(`心情：${moodArr(e).join('、')}`);
     if (e.tags?.length) lines.push(`標籤：${e.tags.map(t=>'#'+t).join(' ')}`);
     lines.push('');
     lines.push(e.text);
@@ -1438,7 +1453,7 @@ async function ghPull() {
         : issue.body || '';
 
       const moodMatch = issue.body?.match(/\*\*心情：\*\* (.+)/);
-      const mood = moodMatch ? moodMatch[1].trim() : '';
+      const mood = moodMatch ? moodMatch[1].trim().split('、').map(s=>s.trim()).filter(Boolean) : [];
 
       const tagsMatch = issue.body?.match(/\*\*標籤：\*\* (.+)/);
       const tags = tagsMatch
