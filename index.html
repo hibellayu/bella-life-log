@@ -237,6 +237,26 @@ body {
   cursor: pointer; transition: all 0.15s; font-family: inherit;
 }
 .mood-btn.active { background: var(--gold); border-color: var(--gold); color: #FDF6E8; }
+.mood-picker { margin-bottom: 10px; }
+.mood-current {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--muted); margin-bottom: 10px;
+}
+.mood-current strong { color: var(--gold); font-weight: 600; }
+.mood-clear-btn {
+  border: none; background: transparent; color: var(--muted);
+  font-size: 11px; cursor: pointer; padding: 0 2px;
+}
+.mood-group { margin-bottom: 6px; }
+.mood-group-header {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  border: 1px solid var(--line); background: var(--card);
+  border-radius: 10px; padding: 9px 14px; font-size: 12px; color: var(--ink);
+  cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-bottom: 6px;
+}
+.mood-group-header.open { border-color: var(--gold-light); color: var(--gold); }
+.mood-group-arrow { color: var(--gold); font-size: 13px; }
+.mood-group .mood-row { padding: 0 2px 6px; margin-bottom: 0; }
 .manage-btn {
   border: 1px dashed var(--line); background: transparent;
   border-radius: 20px; padding: 5px 10px; font-size: 11px; color: var(--muted);
@@ -589,9 +609,77 @@ const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch
 // ── Data ──
 let entries    = load(LS.e) || [];
 let config     = load(LS.c) || {};
-let moods      = load(LS.m) || ['開心','平靜','疲倦','焦慮','充實'];
 let tags       = load(LS.t) || ['運動','投資','工作','健康','生活','轉職','心情','靈感'];
 let deletedIds = new Set(load(LS.d) || []);
+
+// ── 心情分類（心理學常見情緒分類，供心情選擇器分組展開用）──
+const PRESET_MOOD_GROUPS = [
+  ['正向情緒', ['開心','喜悅','平靜','放鬆','滿足','充實','感恩','自信','期待','興奮','安心','驕傲','溫暖','好奇']],
+  ['負向情緒', ['焦慮','疲倦','沮喪','難過','生氣','煩躁','失望','孤單','愧疚','羞愧','害怕','嫉妒','委屈','無力']],
+  ['中性／複雜情緒', ['困惑','矛盾','麻木','驚訝','懷念','感動','釋然']],
+];
+const DEFAULT_MOODS = PRESET_MOOD_GROUPS.flatMap(([,items])=>items);
+
+let moods = (() => {
+  const stored = load(LS.m);
+  if (!stored) return [...DEFAULT_MOODS];
+  // 既有使用者：補上新分類裡還沒有的情緒，保留原本順序與自訂項目，不刪減任何現有項目
+  const toAdd = DEFAULT_MOODS.filter(m=>!stored.includes(m));
+  if (toAdd.length) { const merged=[...stored,...toAdd]; save(LS.m,merged); return merged; }
+  return stored;
+})();
+
+function getMoodGroups() {
+  const known = new Set(DEFAULT_MOODS);
+  const groups = PRESET_MOOD_GROUPS
+    .map(([name,items])=>({ name, items: items.filter(m=>moods.includes(m)) }))
+    .filter(g=>g.items.length);
+  const custom = moods.filter(m=>!known.has(m));
+  if (custom.length) groups.push({ name:'自訂', items: custom });
+  return groups;
+}
+
+// 心情選擇器：分類列表，預設收合，點分類展開
+function buildMoodPicker(initialMood, onChange) {
+  const wrap = el('div',{className:'mood-picker'});
+  let selected = initialMood || '';
+  let openGroup = null;
+
+  function render() {
+    wrap.innerHTML = '';
+    if (selected) {
+      const cur = el('div',{className:'mood-current'});
+      cur.appendChild(el('span',{},'目前心情：'));
+      cur.appendChild(el('strong',{},selected));
+      cur.appendChild(el('button',{type:'button',className:'mood-clear-btn',onClick:()=>{ selected=''; onChange(''); render(); }},'✕'));
+      wrap.appendChild(cur);
+    }
+    getMoodGroups().forEach(g=>{
+      const isOpen = openGroup===g.name;
+      const groupWrap = el('div',{className:'mood-group'});
+      const hasSel = g.items.includes(selected);
+      const header = el('button',{type:'button',className:'mood-group-header'+(isOpen?' open':'')},
+        el('span',{},g.name+(hasSel?' · '+selected:'')),
+        el('span',{className:'mood-group-arrow'},isOpen?'－':'＋')
+      );
+      header.addEventListener('click',()=>{ openGroup = isOpen?null:g.name; render(); });
+      groupWrap.appendChild(header);
+      if (isOpen) {
+        const row = el('div',{className:'mood-row'});
+        g.items.forEach(m=>{
+          const btn = el('button',{type:'button',className:'mood-btn'+(selected===m?' active':'')},m);
+          btn.addEventListener('click',()=>{ selected = selected===m?'':m; onChange(selected); render(); });
+          row.appendChild(btn);
+        });
+        groupWrap.appendChild(row);
+      }
+      wrap.appendChild(groupWrap);
+    });
+    wrap.appendChild(el('button',{type:'button',className:'manage-btn',style:'margin-top:2px;',onClick:()=>openManage('moods')},'＋ 管理'));
+  }
+  render();
+  return wrap;
+}
 
 // ── UI state ──
 let page = 'dash';
@@ -839,14 +927,7 @@ function renderWrite() {
 
   // Mood
   card.appendChild(el('div',{className:'field-label'},'心情'));
-  const moodRow = el('div',{className:'mood-row'});
-  moods.forEach(m=>{
-    const btn = el('button',{className:'mood-btn'+(ws.mood===m?' active':''),onClick:()=>{ ws.mood=ws.mood===m?'':m; renderWrite(); }},m);
-    moodRow.appendChild(btn);
-  });
-  const mmBtn = el('button',{className:'manage-btn',onClick:()=>openManage('moods')},'＋ 管理');
-  moodRow.appendChild(mmBtn);
-  card.appendChild(moodRow);
+  card.appendChild(buildMoodPicker(ws.mood, v=>{ ws.mood=v; }));
 
   // Tags
   card.appendChild(el('div',{className:'field-label'},'標籤'));
@@ -1031,16 +1112,9 @@ function openEditModal(entry) {
   // 心情選擇
   sheet.appendChild(el('div',{style:'font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:8px;'},'心情'));
   let selMood = entry.mood || '';
-  const moodRow = el('div',{className:'mood-row',style:'margin-bottom:16px;'});
-  moods.forEach(m => {
-    const btn = el('button',{className:'mood-btn'+(selMood===m?' active':''),onClick:()=>{
-      selMood = selMood===m?'':m;
-      moodRow.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('active'));
-      if(selMood===m) btn.classList.add('active');
-    }},m);
-    moodRow.appendChild(btn);
-  });
-  sheet.appendChild(moodRow);
+  const moodPicker = buildMoodPicker(selMood, v=>{ selMood=v; });
+  moodPicker.style.marginBottom = '16px';
+  sheet.appendChild(moodPicker);
 
   // 標籤選擇
   sheet.appendChild(el('div',{style:'font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:8px;'},'標籤'));
